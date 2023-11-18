@@ -129,6 +129,14 @@ void Scene::loadObj(const char *textureDir, const char *filePath) {
         buffer.push_back(n[k][2]);
         buffer.push_back(tc[k][0]);
         buffer.push_back(tc[k][1]);
+
+        gMinX = std::min(gMinX, v[k][0]);
+        gMinY = std::min(gMinY, v[k][1]);
+        gMinZ = std::min(gMinZ, v[k][2]);
+
+        gMaxX = std::max(gMaxX, v[k][0]);
+        gMaxY = std::max(gMaxY, v[k][1]);
+        gMaxZ = std::max(gMaxZ, v[k][2]);
       }
     }
 
@@ -163,18 +171,24 @@ void Scene::loadObj(const char *textureDir, const char *filePath) {
   }
 }
 
-void Scene::draw(Shader &shader) {
+void Scene::draw(Shader &shader, bool voxelize) {
   shader.use();
 
   for (size_t i = 0; i < meshes.size(); i++) {
     Mesh mesh = meshes[i];
 
     glBindVertexArray(mesh.vao);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    if ((mesh.materialId < materials.size())) {
-      std::string diffuse_texname = materials[mesh.materialId].diffuse_texname;
-      if (textures.find(diffuse_texname) != textures.end()) {
-        glBindTexture(GL_TEXTURE_2D, textures[diffuse_texname]);
+    if (voxelize) {
+      int tx = 1;
+      shader.setUniform(uniformType::i1, &tx, "tex");
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      if ((mesh.materialId < materials.size())) {
+        std::string diffuse_texname =
+            materials[mesh.materialId].diffuse_texname;
+        if (textures.find(diffuse_texname) != textures.end()) {
+          glBindTexture(GL_TEXTURE_2D, textures[diffuse_texname]);
+        }
       }
     }
 
@@ -183,4 +197,21 @@ void Scene::draw(Shader &shader) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
   }
+}
+
+glm::vec3 Scene::getWorldCenter() {
+  glm::vec3 gMin = glm::vec3(gMinX, gMinY, gMinZ);
+  glm::vec3 gMax = glm::vec3(gMaxX, gMaxY, gMaxZ);
+
+  return 0.5f * (gMin + gMax);
+}
+
+float Scene::getWorldSize() {
+  glm::vec3 gMin = glm::vec3(gMinX, gMinY, gMinZ);
+  glm::vec3 gMax = glm::vec3(gMaxX, gMaxY, gMaxZ);
+
+  glm::vec3 diag = (gMax - gMin);
+
+  float size = std::max(diag.x, std::max(diag.y, diag.z));
+  return size;
 }
