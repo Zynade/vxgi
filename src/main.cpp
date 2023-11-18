@@ -27,7 +27,9 @@ int main() {
 
   GLFWwindow *window = setupWindow(SCR_WIDTH, SCR_HEIGHT);
 
-  Shader shader = Shader("shaders/scene.vert", "shaders/scene.frag");
+  Shader shader =
+      Shader("shaders/voxelization.vert", "shaders/voxelization.frag",
+             "shaders/voxelization.geom");
   shader.use();
 
   setupModelTransformation();
@@ -36,9 +38,61 @@ int main() {
   Scene scene = Scene();
   scene.loadObj("assets/crytek-sponza/", "assets/crytek-sponza/sponza.obj");
 
+  // create texture for voxelization
+  GLuint voxelTexture;
+  std::vector<GLubyte> clearBuffer(4 * SCR_WIDTH * SCR_WIDTH * SCR_WIDTH, 0);
+
+  glGenTextures(1, &voxelTexture);
+  glBindTexture(GL_TEXTURE_3D, voxelTexture);
+  glTexStorage3D(GL_TEXTURE_3D, 7, GL_RGBA8, SCR_WIDTH, SCR_WIDTH, SCR_WIDTH);
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, SCR_WIDTH, SCR_WIDTH, SCR_WIDTH, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, &clearBuffer[0]);
+
+  // LOD settings for mipmapping.
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glGenerateMipmap(GL_TEXTURE_3D);
+  glBindTexture(GL_TEXTURE_3D, voxelTexture);
+
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+
+  glBindImageTexture(0, voxelTexture, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+  int tx = 0;
+  shader.setUniform(uniformType::i1, &tx, "voxelTexture");
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_3D, voxelTexture);
+  glm::vec3 worldCenter = scene.getWorldCenter();
+  float worldSizeHalf = 0.5f * scene.getWorldSize();
+  shader.setUniform(uniformType::fv3, glm::value_ptr(worldCenter),
+                    "worldCenter");
+  shader.setUniform(uniformType::f1, &worldSizeHalf, "worldSizeHalf");
+  scene.draw(shader, true);
+  glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
   glfwSetCursorPosCallback(window, mouseCallback);
   glfwSetScrollCallback(window, scrollCallback);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+  Shader vis = Shader("shaders/vis.vert", "shaders/vis.frag");
+  vis.use();
+  vis.setUniform(uniformType::mat4x4, glm::value_ptr(modelT), "M");
+  vis.setUniform(uniformType::fv3, glm::value_ptr(worldCenter), "worldCenter");
+  vis.setUniform(uniformType::f1, &worldSizeHalf, "worldSizeHalf");
+  tx = 0;
+  vis.setUniform(uniformType::i1, &tx, "voxelTexture");
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
@@ -51,14 +105,15 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 viewT = camera.getViewMatrix();
-    shader.setUniform(uniformType::mat4x4, glm::value_ptr(viewT), "V");
+    vis.setUniform(uniformType::mat4x4, glm::value_ptr(viewT), "V");
 
     glm::mat4 projectionT = glm::perspective(
         glm::radians(camera.zoom), (GLfloat)SCR_WIDTH / (GLfloat)SCR_HEIGHT,
         0.1f, 5000.0f);
-    shader.setUniform(uniformType::mat4x4, glm::value_ptr(projectionT), "P");
-
-    scene.draw(shader);
+    vis.setUniform(uniformType::mat4x4, glm::value_ptr(projectionT), "P");
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, voxelTexture);
+    scene.draw(vis, false);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
