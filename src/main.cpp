@@ -40,12 +40,12 @@ int main() {
 
   // create texture for voxelization
   GLuint voxelTexture;
-  std::vector<GLubyte> clearBuffer(4 * SCR_WIDTH * SCR_WIDTH * SCR_WIDTH, 0);
+  std::vector<GLubyte> clearBuffer(4 * VOXEL_DIM * VOXEL_DIM * VOXEL_DIM, 0);
 
   glGenTextures(1, &voxelTexture);
   glBindTexture(GL_TEXTURE_3D, voxelTexture);
-  glTexStorage3D(GL_TEXTURE_3D, 7, GL_RGBA8, SCR_WIDTH, SCR_WIDTH, SCR_WIDTH);
-  glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, SCR_WIDTH, SCR_WIDTH, SCR_WIDTH, 0,
+  glTexStorage3D(GL_TEXTURE_3D, 7, GL_RGBA8, VOXEL_DIM, VOXEL_DIM, VOXEL_DIM);
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, VOXEL_DIM, VOXEL_DIM, VOXEL_DIM, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, &clearBuffer[0]);
 
   // LOD settings for mipmapping.
@@ -73,6 +73,7 @@ int main() {
   shader.setUniform(uniformType::fv3, glm::value_ptr(worldCenter),
                     "worldCenter");
   shader.setUniform(uniformType::f1, &worldSizeHalf, "worldSizeHalf");
+  glViewport(0, 0, VOXEL_DIM, VOXEL_DIM);
   scene.draw(shader, true);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -94,6 +95,7 @@ int main() {
   tx = 0;
   vis.setUniform(uniformType::i1, &tx, "voxelTexture");
 
+  glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
