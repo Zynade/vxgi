@@ -8,15 +8,30 @@
 in vec3 worldPosFrag;
 in vec3 normalFrag;
 in vec2 texCoordFrag;
+in vec3 tangentFrag;
+in vec3 bitangentFrag;
 in vec4 lightSpacePosFrag;
 
+struct Material {
+	vec3 kd;
+	vec3 ks;
+	float shininess;
+	int hasDiffuseMap;
+	int hasSpecularMap;
+	int hasNormalMap;
+	sampler2D diffuseMap;
+	sampler2D specularMap;
+	sampler2D normalMap;
+};
+
 uniform vec3 lightPosition;
+uniform vec3 camPosition;
 uniform vec3 worldCenter;
 uniform float worldSizeHalf;
 
 uniform sampler3D voxelTexture;
-uniform sampler2D tex;
 uniform sampler2D shadowMap;
+uniform Material material;
 
 out vec4 outColor;
 
@@ -134,8 +149,18 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 lightDir, vec3 normal) {
 }
 
 void main() {
-  vec3 color = texture(tex, texCoordFrag).rgb;
+	vec3 color = material.kd;
+	if (material.hasDiffuseMap == 1)
+		color = texture(material.diffuseMap, texCoordFrag).rgb;
+
   vec3 normal = normalize(normalFrag);
+	if (material.hasNormalMap == 1) {
+		mat3 TBN = mat3(tangentFrag, bitangentFrag, normalFrag);
+		normal = texture(material.normalMap, texCoordFrag).rgb;
+		normal = normal * 2.0 - 1.0;   
+		normal = normalize(TBN * normal);
+	}
+
   vec3 lightColor = vec3(1.0);
 
   // diffuse
@@ -143,12 +168,22 @@ void main() {
   float diff = max(dot(lightDir, normal), 0.0);
   vec3 diffuse = diff * lightColor;
 
+	// specular
+	vec3 viewDir = normalize(camPosition - worldPosFrag);
+	vec3 reflectDir = reflect(-lightDir, normal);  
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	vec3 ks = material.ks;
+	if (material.hasSpecularMap == 1) {
+		ks = texture(material.specularMap, texCoordFrag).rgb;
+	}
+	vec3 specular = spec * ks;
+
   // calculate shadow
   float shadow = shadowCalculation(lightSpacePosFrag, lightDir, normal);
-  vec3 lighting = (1.0 - shadow) * diffuse * color;
+  vec3 lighting = (1.0 - shadow) * (diffuse + specular) * color;
 
   vec3 diffusegi = color * indirectDiffuseLight(color, normal);
-  lighting += diffusegi;
+	lighting += 0.1 * diffusegi;
 
   outColor = vec4(lighting, 1.0);
 }

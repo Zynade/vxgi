@@ -34,6 +34,7 @@ public:
   }
 
   glm::mat4 getViewMatrix();
+  glm::vec3 getPosition() { return position; }
 
   void processKeyboard(Camera_Movement direction, float deltaTime);
 

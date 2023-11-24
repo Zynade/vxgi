@@ -84,12 +84,12 @@ int main() {
   voxelizeShader.setUniform(uniformType::mat4x4,
                             glm::value_ptr(shadowMap.getLightSpaceMatrix()),
                             "lightSpaceMatrix");
-  int shadowMapUnit = 2;
+  int shadowMapUnit = 1;
   voxelizeShader.setUniform(uniformType::i1, &shadowMapUnit, "shadowMap");
-  glActiveTexture(GL_TEXTURE2);
+  glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, shadowMap.getDepthMapTexture());
   glViewport(0, 0, VOXEL_DIM, VOXEL_DIM);
-  scene.draw(voxelizeShader, 1);
+  scene.draw(voxelizeShader, 2);
   glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   glActiveTexture(GL_TEXTURE0);
   glGenerateMipmap(GL_TEXTURE_3D);
@@ -105,6 +105,28 @@ int main() {
   glfwSetScrollCallback(window, scrollCallback);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   /* VOXELIZATION */
+
+  // TODO: fetch from GPU
+  // GLubyte *imageData = (GLubyte *)malloc(sizeof(GLubyte) * 4 * VOXEL_DIM *
+  // VOXEL_DIM * VOXEL_DIM);
+  // glGetTexImage(GL_TEXTURE_3D, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
+
+  // int w, h, d;
+  // w = h = d = VOXEL_DIM;
+
+  // int idx = 0;
+  // glm::vec4 emitColor;
+  // std::cout << "P3\n" << VOXEL_DIM << ' ' << VOXEL_DIM << "\n255\n";
+  // for (int x = 255; x < 256; x++) {
+  // for (int y = 0; y < h; y++) {
+  // for (int z = 0; z < d; z++) {
+  // idx = 4 * (x + y * w + z * w * w);
+  // std::cout << (float)imageData[idx] << " ";
+  // std::cout << (float)imageData[idx + 1] << " ";
+  // std::cout << (float)imageData[idx + 2] << "\n";
+  //}
+  //}
+  //}
 
   Shader vct = Shader("shaders/vct.vert", "shaders/vct.frag");
   vct.use();
@@ -142,16 +164,19 @@ int main() {
         glm::radians(camera.zoom), (GLfloat)SCR_WIDTH / (GLfloat)SCR_HEIGHT,
         0.1f, 5000.0f);
     vct.setUniform(uniformType::mat4x4, glm::value_ptr(projectionT), "P");
+    glm::vec3 camPosition = camera.getPosition();
+    vct.setUniform(uniformType::fv3, glm::value_ptr(camPosition),
+                   "camPosition");
 
-    voxelTextureUnit = 0;
-    vct.setUniform(uniformType::i1, &voxelTextureUnit, "voxelTexture");
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, voxelTexture);
-    shadowMapUnit = 2;
+    voxelTextureUnit = 0;
+    vct.setUniform(uniformType::i1, &voxelTextureUnit, "voxelTexture");
+    shadowMapUnit = 1;
     vct.setUniform(uniformType::i1, &shadowMapUnit, "shadowMap");
-    glActiveTexture(GL_TEXTURE2);
+    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadowMap.getDepthMapTexture());
-    scene.draw(vct, 1);
+    scene.draw(vct, 2);
 
     // vis.use();
     // glm::mat4 viewT = camera.getViewMatrix();

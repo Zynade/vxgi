@@ -9,9 +9,21 @@ uniform vec3 lightPosition;
 uniform vec3 worldCenter;
 uniform float worldSizeHalf;
 
+struct Material {
+	vec3 kd;
+	vec3 ks;
+	float shininess;
+	int hasDiffuseMap;
+	int hasSpecularMap;
+	int hasNormalMap;
+	sampler2D diffuseMap;
+	sampler2D specularMap;
+	sampler2D normalMap;
+};
+
 layout(RGBA8) uniform image3D voxelTexture;
-uniform sampler2D tex;
 uniform sampler2D shadowMap;
+uniform Material material;
 
 float shadowCalculation(vec4 fragPosLightSpace, vec3 lightDir, vec3 normal) {
     // perform perspective divide
@@ -38,7 +50,9 @@ float shadowCalculation(vec4 fragPosLightSpace, vec3 lightDir, vec3 normal) {
 }
 
 void main() {
-    vec3 color = texture(tex, texCoordFrag).rgb;
+    vec3 color = material.kd;
+    if (material.hasDiffuseMap == 1)
+        color = texture(material.diffuseMap, texCoordFrag).rgb;
     vec3 normal = normalize(normalFrag);
     vec3 lightColor = vec3(1.0);
 
