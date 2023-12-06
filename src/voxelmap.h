@@ -16,6 +16,7 @@ private:
   Shader visualizationShader;
   Shader renderShader;
   Scene &scene;
+  Scene cube;
   ShadowMap &shadowMap;
 
 public:
@@ -28,6 +29,8 @@ public:
         visualizationShader(visualizeVsPath, visualizeFsPath),
         renderShader(renderVsPath, renderFsPath) {
     initTexture();
+    cube = Scene();
+    cube.loadObj("assets/", "assets/cube.obj", 0);
   }
 
   void initVoxelizeShader(const char *vsPath, const char *fsPath,

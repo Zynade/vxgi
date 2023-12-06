@@ -141,10 +141,6 @@ void VoxelMap::visualize(Camera &camera) {
                                  "worldCenter");
   visualizationShader.setUniform(uniformType::f1, &worldSizeHalf,
                                  "worldSizeHalf");
-  visualizationShader.setUniform(uniformType::fv3, glm::value_ptr(worldCenter),
-                                 "worldCenter");
-  visualizationShader.setUniform(uniformType::f1, &worldSizeHalf,
-                                 "worldSizeHalf");
   glm::mat4 viewT = camera.getViewMatrix();
   visualizationShader.setUniform(uniformType::mat4x4, glm::value_ptr(viewT),
                                  "V");
@@ -159,5 +155,9 @@ void VoxelMap::visualize(Camera &camera) {
                                  "voxelTexture");
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_3D, voxelTexture);
-  scene.draw(visualizationShader, 1);
+  Mesh cubeMesh = cube.meshes[0];
+
+  glBindVertexArray(cubeMesh.vao);
+  glDrawArraysInstanced(GL_TRIANGLES, 0, 3 * cubeMesh.numTriangles,
+                        VOXEL_DIM * VOXEL_DIM * VOXEL_DIM);
 }
