@@ -114,7 +114,9 @@ void Scene::loadObj(const char *textureDir, const char *filePath,
   for (size_t s = 0; s < shapes.size(); s++) {
     Mesh mesh;
     std::vector<GLfloat> buffer;
-    Material material = materials[shapes[s].mesh.material_ids[0]];
+    Material material;
+    if (materials.size() > 0)
+      material = materials[shapes[s].mesh.material_ids[0]];
     float scaleFactor = 1.0;
 
     if (isDynamic) {

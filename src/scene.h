@@ -12,7 +12,6 @@
 
 class Scene {
 private:
-  std::vector<Mesh> meshes;
   std::map<std::string, GLuint> textures;
   std::vector<Material> materials;
   float gMinX, gMinY, gMinZ, gMaxX, gMaxY, gMaxZ;
@@ -37,6 +36,7 @@ public:
   void draw(Shader &shader, int textureUnit);
   glm::vec3 getWorldCenter();
   float getWorldSize();
+  std::vector<Mesh> meshes;
   std::vector<glm::vec3> getAABB();
 
   glm::vec3 &getFloorSpecularRef() { return materials[floorIdx].ks; }
